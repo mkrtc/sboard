@@ -1,0 +1,40 @@
+version: '3.8'
+services:
+    client:
+        image: client
+        container_name: sboard-client
+        networks:
+            - main
+        ports:
+            - 3000:3000
+        command: [ "node", "./.next/standalone/server.js" ]
+    server:
+        image: server
+        container_name: sboard-server
+        networks:
+            - main
+        ports:
+            - 5000:5000
+        env_file:
+            - .env
+        command: [ "node", "./dist/main.js" ]
+    postgres:
+        image: postgres:17-alpine
+        container_name: postgres
+        networks:
+            - main
+        restart: unless-stopped
+        ports:
+            - '5433:5432'
+        environment:
+            POSTGRES_USER: root
+            POSTGRES_PASSWORD: root
+            POSTGRES_DB: app_db
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+
+networks:
+    main:
