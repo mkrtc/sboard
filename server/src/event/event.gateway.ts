@@ -1,6 +1,7 @@
-import { SubscribeMessage, WebSocketGateway } from '@nestjs/websockets';
+import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway } from '@nestjs/websockets';
 import { EventService } from './event.service';
-import { Socket } from 'node:net';
+import { CreateEventDto } from './dto/create-event.dto';
+import { Socket } from 'socket.io';
 
 @WebSocketGateway({
   path: '/ws/events',
@@ -16,7 +17,12 @@ export class EventGateway {
 
   @SubscribeMessage('message')
   public handleMessage(client: Socket, payload: any): string {
-    console.log(client.emit("message", {hello: "from server"}))
     return 'Hello world!';
+  }
+
+  @SubscribeMessage('createEvent')
+  public createEvent(@ConnectedSocket() client: Socket, @MessageBody() payload: CreateEventDto){
+    console.log(payload)
+    client.emit("newEvent", payload);
   }
 }

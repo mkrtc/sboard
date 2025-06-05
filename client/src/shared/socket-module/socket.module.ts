@@ -47,7 +47,7 @@ export class SocketModule {
         this._socket.send(event, arg, cb);
     }
 
-    public disconnect(): void {
-        this._socket.disconnect();
+    public disconnect(): boolean {
+        return this._socket.disconnect().connected;
     }
 }
