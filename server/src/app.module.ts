@@ -1,29 +1,33 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { EventModule } from './event/event.module';
-import { EventEntity } from './event/entities/event.entity';
-import { SnapshotEntity } from './event/entities/snapshot.entity';
+import { CanvasEventModule } from './canvas-event/canvas-event.module';
+import { CanvasEventEntity } from './canvas-event/entities/canvas-event.entity';
+import { SnapshotEntity } from './canvas-event/entities/snapshot.entity';
+import { DatabaseModule } from './database/database.module';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { ApiInterceptor } from './api/api.interceptor';
+import { ApiFilter } from './api/api.filter';
+import { LoggerModule } from './logger/logger.module';
 
 @Module({
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ApiInterceptor
+    },
+    {
+      provide: APP_FILTER,
+      useClass: ApiFilter
+    }
+  ],
   imports: [
     ConfigModule.forRoot({
       envFilePath: '../.env',
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.PG_HOST,
-      port: Number(process.env.PG_PORT),
-      username: process.env.PG_USER,
-      password: process.env.PG_PASSWD,
-      database: process.env.PG_DB,
-      autoLoadEntities: true,
-      synchronize: true,
-      entities: [EventEntity, SnapshotEntity]
-    }),
-    EventModule,
+    DatabaseModule.register([CanvasEventEntity, SnapshotEntity]),
+    CanvasEventModule,
+    LoggerModule
   ],
 })
 export class AppModule {}

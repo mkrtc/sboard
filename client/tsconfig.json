@@ -24,6 +24,8 @@
       "@/shared": ["./src/shared"],
       "@/components": ["./src/components"],
       "@/entities": ["./src/entities"],
+      "@/providers": ["./src/providers"],
+      "@/repositories": ["./src/repositories"],
       "@/styles/*": ["./src/styles/*"],
     }
   },

@@ -1,26 +1,36 @@
 import type { FC } from 'react';
 import styles from "../styles/canvas.module.css";
-import { EventEntity } from '@/entities';
+import { CanvasEventEntity } from '@/entities';
 
 interface HistoryListViewProps {
-    events: EventEntity[];
+    events: CanvasEventEntity[];
+    selectedEventId: string;
+    onClickToEvent: (event: CanvasEventEntity) => void;
 }
-export const HistoryListView: FC<HistoryListViewProps> = ({ events }) => {
+export const HistoryListView: FC<HistoryListViewProps> = ({ events, selectedEventId, onClickToEvent }) => {
     return (
         <ul className={styles.canvas_container__list}>
             {events.map(event => (
-                <li key={event.id} className={styles.canvas_container__listItem}>
+                <li
+                    onClick={() => onClickToEvent(event)}
+                    key={event.id}
+                    className={styles.canvas_container__listItem}
+                >
                     <span className={styles.canvas_container__listItemTitle}>{event.created.toLocaleString("fr-CH")}</span>
-                    {event.data && <div className={styles.canvas_container__listItemBody}>
+                    {
+                        selectedEventId === event.id &&
+                        <span className={styles.canvas_container__listItemTitle}>selected</span>
+                    }
+                    {event.payload && <div className={styles.canvas_container__listItemBody}>
                         <span className={styles.canvas_container__listItemBodyItem}>
-                            <span className={styles.canvas_container__listItemBodyKey}>"x"</span>
+                            <span className={styles.canvas_container__listItemBodyKey}>"type"</span>
                             <span className={styles.canvas_container__listItemBodyDrawer}>:</span>
-                            <span className={styles.canvas_container__listItemBodyValue}>10</span>
+                            <span className={styles.canvas_container__listItemBodyValue}>{event.type}</span>
                         </span>
                         <span className={styles.canvas_container__listItemBodyItem}>
-                            <span className={styles.canvas_container__listItemBodyKey}>"y"</span>
+                            <span className={styles.canvas_container__listItemBodyKey}>"id"</span>
                             <span className={styles.canvas_container__listItemBodyDrawer}>:</span>
-                            <span className={styles.canvas_container__listItemBodyValue}>10</span>
+                            <span className={styles.canvas_container__listItemBodyValue}>{event.id}</span>
                         </span>
                     </div>}
                 </li>

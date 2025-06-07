@@ -39,11 +39,11 @@ export class SocketModule {
         this._socket.off(event, listener);
     }
 
-    public emit<T>(event: string, arg: any[] | any, cb: (payload: T) => void): void{
+    public emit<T>(event: string, arg?: any[] | any, cb?: (payload: T) => void): void{
         this._socket.emit(event, arg, cb);
     }
 
-    public send<T>(event: string, arg: any[] | any, cb: (payload: T) => void): void {
+    public send<T>(event: string, arg?: any[] | any, cb?: (payload: T) => void): void {
         this._socket.send(event, arg, cb);
     }
 

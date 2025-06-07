@@ -1,24 +1,26 @@
-import { EventEntity, SquareEntity } from "@/entities";
-import { SocketModule } from "@/shared";
+import { CanvasEventEntity, CanvasEventPayload } from "@/entities";
+import { HttpProvider, SocketProvider } from "@/providers";
+import { CanvasEventRepository } from "@/repositories";
 import { MouseEvent } from "react";
 
 
 
 export class CanvasService {
     private readonly _path: string = "/ws/events";
+    private readonly canvasEventRepository: CanvasEventRepository;
+
     private _connected: boolean = false;
     private _canvas: HTMLCanvasElement | null = null;
-    public _events: EventEntity[] = [];
-    private _squares: SquareEntity[] = [];
-    public _selectedEvent: EventEntity | null = null;
-    private _selectedSquare: SquareEntity | null = null;
+
+    private _squares: CanvasEventPayload[] = [];
+    public _selectedEvent: CanvasEventEntity | null = null;
+    private _selectedSquare: CanvasEventPayload | null = null;
     private _offsetX: number = 0;
     private _offsetY: number = 0;
 
-    private readonly socketModule: SocketModule;
 
     constructor() {
-        this.socketModule = new SocketModule(this._path);
+        this.canvasEventRepository = new CanvasEventRepository(new HttpProvider, new SocketProvider(this._path));
     }
 
     public set canvas(canvas: HTMLCanvasElement) {
@@ -29,38 +31,77 @@ export class CanvasService {
         return this._connected;
     }
 
-    public addEvents(events: EventEntity[]) {
-        this._events = events;
-        this._selectedEvent = events[0];
-        this.draw();
-    }
-
-    public addElement() {
-        EventEntity.createRandomSquare(this.socketModule, this._selectedEvent);
-    }
-
-    public startup() {
+    public startup(event: CanvasEventEntity, onNewEvent: (event: CanvasEventEntity) => void) {
         if (!this._canvas) throw new Error("Canvas is not set");
+        this._selectedEvent = event;
+        this._squares = this._selectedEvent?.payload || [];
+        
         this.paint();
-        this.socketModule.connect();
-        this.socketModule.onEvent("newEvent", (event: EventEntity) => {
-            // this.addEvents(events);
-            this._events.push(event);
-            this._selectedEvent = event;
-            this._squares = event.data;
+        
+        this.canvasEventRepository.onNewEvent(event => {
+            this.setEvent(event);
+            onNewEvent(event);
             this.draw();
         });
     }
-
+    
     public destroy() {
-        this.socketModule.disconnect();
+        this.canvasEventRepository.destroy();
     }
 
-    public paint() {
+    public getEvents(){
+        return this.canvasEventRepository.getAll();
+    }
+
+    public async getEventById(eventId: string){
+        const ev = await this.canvasEventRepository.getEventById(eventId);
+        this._selectedEvent = ev;
+        this._squares = ev.payload;
+        this.draw()
+        return ev;
+    }
+
+    public addEvent(event: CanvasEventEntity) {
+        this._selectedEvent = event;
+        this.draw();
+    }
+
+    public addSquare() {
+        this.canvasEventRepository.addSquare();
+    }
+
+    public onMouseDown(event: MouseEvent<HTMLCanvasElement>) {
+        const element = this.getElement(event);
+        this._selectedSquare = element;
+    }
+
+    public onMouseUp(event: MouseEvent<HTMLCanvasElement>) {
+        this._selectedSquare = null;
+        this.canvasEventRepository.move(this._squares);
+    }
+
+    public onMouseMove(event: MouseEvent<HTMLCanvasElement>) {
+        if (!this._selectedEvent || !this._selectedSquare) return;
+        const [canvas] = this.getCanvasCtx();
+        const rect = canvas.getBoundingClientRect();
+        const x = (event.clientX - rect.left) * (canvas.width / canvas.clientWidth);
+        const y = (event.clientY - rect.top) * (canvas.height / canvas.clientHeight);
+        this._selectedSquare.x = x - this._offsetX;
+        this._selectedSquare.y = y - this._offsetY;
+        this.draw();
+    }
+
+    private setEvent(event: CanvasEventEntity) {
+        this._selectedEvent = event;
+        this._squares = event.payload;
+        this.draw();
+    }
+
+    private paint() {
         if (!this._selectedEvent) return null;
         const [_, ctx] = this.getCanvasCtx();
 
-        for (const square of this._selectedEvent.data || []) {
+        for (const square of this._selectedEvent.payload || []) {
             ctx.fillStyle = square.color;
             ctx.fillRect(square.x, square.y, square.width, square.height);
         }
@@ -75,14 +116,15 @@ export class CanvasService {
         return [this._canvas, ctx];
     }
 
-    private getElement(event: MouseEvent<HTMLCanvasElement>): SquareEntity | null {
+    private getElement(event: MouseEvent<HTMLCanvasElement>): CanvasEventPayload | null {
         if (!this._selectedEvent) return null;
         const [canvas] = this.getCanvasCtx();
         const rect = canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
 
-        for (const element of this._selectedEvent.data || []) {
+        for (let i = 0; i < this._selectedEvent?.payload?.length || 0; i++) {
+            const element = this._selectedEvent.payload[i];
             if (
                 x >= element.x &&
                 x <= element.x + element.width &&
@@ -91,8 +133,7 @@ export class CanvasService {
             ) {
                 this._offsetX = x - element.x;
                 this._offsetY = y - element.y;
-
-                this._squares.filter(el => el.id !== element.id);
+                this._squares.splice(i, 1);
                 this._squares.push(element);
                 this.draw();
                 return element;
@@ -102,40 +143,7 @@ export class CanvasService {
         return null;
     }
 
-    public onMouseDown(event: MouseEvent<HTMLCanvasElement>) {
-        const element = this.getElement(event);
-        this._selectedSquare = element;
-    }
-
-    public onMouseUp(event: MouseEvent<HTMLCanvasElement>) {
-        this._selectedSquare = null;
-    }
-
-    public onMouseMove(event: MouseEvent<HTMLCanvasElement>) {
-        if (!this._selectedEvent || !this._selectedSquare) return;
-        const [canvas, ctx] = this.getCanvasCtx();
-        const rect = canvas.getBoundingClientRect();
-        const x = (event.clientX - rect.left) * (canvas.width / canvas.clientWidth);
-        const y = (event.clientY - rect.top) * (canvas.height / canvas.clientHeight);
-        this._selectedSquare.x = x - this._offsetX;
-        this._selectedSquare.y = y - this._offsetY;
-        this.updateCanvas();
-    }
-
-    public updateCanvas() {
-        if (!this._selectedEvent) return;
-
-        const event = this._events.find(e => e.id === this._selectedEvent!.id);
-        const element = this._selectedSquare;
-        if (!event || !element) return;
-
-        const index = this._events.findIndex(e => e.id === event.id);
-        if (index === -1) return;
-        this._events[index] = event;
-        this.draw();
-    }
-
-    public draw() {
+    private draw() {
         const [canvas, ctx] = this.getCanvasCtx();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (!this._squares) return;
@@ -145,36 +153,8 @@ export class CanvasService {
         }
     }
 
-    public connect(): void {
-        this._connected = this.socketModule.connect();
-    }
-
-    public disconnect(): void {
-        this._connected = this.socketModule.disconnect();
-    }
-
-    public onConnect() {
-        this.socketModule.onConnect(() => {
-            console.log("Connected to server");
-        })
-    }
-
-    public emit() {
-        this.socketModule.emit("message", { hello: "world2" }, value => {
-            console.log("emit", value);
-        });
-    }
-
-    public send() {
-        this.socketModule.send("message", { hello: "world" }, value => {
-            console.log("send", value);
-        });
-    }
-
-    public onMessage() {
-        this.socketModule.onEvent("message", (data: any) => {
-            console.log(data);
-        })
+    public clear(){
+        this.canvasEventRepository.clear();
     }
 
 

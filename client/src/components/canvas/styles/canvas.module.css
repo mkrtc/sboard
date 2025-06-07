@@ -1,5 +1,4 @@
-
-.container{
+.container {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -8,11 +7,13 @@
 }
 
 
-.btns_container{
+.btns_container {
     padding: 10px 0px;
+    display: flex;
+    gap: 10px;
 }
 
-.btns_container__btn{
+.btns_container__btn {
     border: none;
     background: none;
     padding: 3px 5px;
@@ -20,8 +21,8 @@
     border-radius: 3px;
     box-shadow: 0px 0px 3px gray;
     transition: background-color .3s;
-    
-    &:hover{
+
+    &:hover {
         background-color: #e2e2e2;
     }
 }
@@ -33,26 +34,27 @@
     width: fit-content;
 }
 
-.canvas_container{
+.canvas_container {
     display: flex;
     gap: 10px;
 }
 
-.canvas_container__history{
+.canvas_container__history {
     padding: 10px;
     border-radius: 5px;
-    width: 300px;
+    width: 350px;
+    height: 600px;
+    overflow: auto;
     box-shadow: 0px 0px 3px gray;
 }
 
-.canvas_container__title{
+.canvas_container__title {
     border-bottom: 1px solid #e2e2e2;
     padding-bottom: 3px;
     width: 100%;
     display: block;
 }
-
-.canvas_container__listItem{
+.canvas_container__listItem {
     padding: 5px;
     box-shadow: 0px 0px 3px gray;
     border-radius: 3px;
@@ -61,12 +63,12 @@
     transition: background-color .3s;
     background-color: #222222;
 
-    &:hover{
+    &:hover {
         background-color: #363636;
     }
 }
 
-.canvas_container__listItemTitle{
+.canvas_container__listItemTitle {
     color: #CD916B;
     margin-bottom: 3px;
     padding-bottom: 3px;
@@ -74,25 +76,25 @@
     display: block;
 }
 
-.canvas_container__listItemBody{
+.canvas_container__listItemBody {
     display: flex;
     flex-direction: column;
     gap: 5px;
 }
 
-.canvas_container__listItemBodyItem{
+.canvas_container__listItemBodyItem {
     display: flex;
     gap: 5px;
 }
 
-.canvas_container__listItemBodyKey{
+.canvas_container__listItemBodyKey {
     color: #9CDCFE;
 }
 
-.canvas_container__listItemBodyDrawer{
+.canvas_container__listItemBodyDrawer {
     color: white;
 }
 
-.canvas_container__listItemBodyValue{
+.canvas_container__listItemBodyValue {
     color: #B4CDA8;
 }
