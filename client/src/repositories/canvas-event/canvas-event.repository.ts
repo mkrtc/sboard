@@ -1,6 +1,7 @@
-import { CanvasEventEntity, CanvasEventPayload, ICanvasEventEntity } from "@/entities";
+import { CanvasEventEntity, EventEntity, ICanvasEventEntity, IEventEntity } from "@/entities";
 import { HTTP_CONFIG, HttpProvider, SocketProvider } from "@/providers";
-import { CANVAS_CLEAR, GET_VERSION, NEW_SQUARE, NEW_VERSION, SQUARE_MOVE } from "./constants";
+import { CLEAR_CANVAS_EVENT, CREATE_FIGURE_EVENT, DELETE_FIGURE_EVENT, EXCEPTION_EVENT, GET_EVENT, GET_LAST_EVENT, MOVE_FIGURE_EVENT, UPDATE_CANVAS_EVENT } from "./constants";
+import { GetEventsFilter } from "./types";
 
 
 export class CanvasEventRepository {
@@ -8,49 +9,52 @@ export class CanvasEventRepository {
     constructor(
         private readonly httpProvider: HttpProvider,
         private readonly socketProvider: SocketProvider
-    ) { 
+    ) {
         socketProvider.connect();
     }
 
-    public async getCurrentEvent() {
-        const response = await this.httpProvider.get<ICanvasEventEntity>(HTTP_CONFIG.paths.canvasEvent.find);
-
-        if (response.status === "success") return new CanvasEventEntity(response.data);
-
-        throw new Error(response.message);
+    public async getEvents(filter?: GetEventsFilter){
+        const events = await this.httpProvider.get<IEventEntity[]>(HTTP_CONFIG.paths.canvasEvent.find, {query: filter});
+        return events.map((event) => new EventEntity(event, this));
     }
 
-    public async getAll(){
-        const response = await this.httpProvider.get<ICanvasEventEntity[]>(HTTP_CONFIG.paths.canvasEvent.find);
-
-        if (response.status === "success") return response.data.map(entity => new CanvasEventEntity(entity));
-
-        throw new Error(response.message);
+    public createFigure() {
+        this.socketProvider.emit(CREATE_FIGURE_EVENT, {});
     }
 
-    public addSquare() {
-        this.socketProvider.emit(NEW_SQUARE, {});
+    public moveFigure(id: string, x: number, y: number, fromEventId?: string){
+        this.socketProvider.emit(MOVE_FIGURE_EVENT, {id, x, y, fromEventId});
     }
 
-    public async getEventById(id: string) {
-        return new Promise<CanvasEventEntity>(res => this.socketProvider.emit<CanvasEventEntity>(GET_VERSION, id, event => res(event)));
+    public deleteFigure(id: string){
+        this.socketProvider.emit(DELETE_FIGURE_EVENT, {id});
     }
 
-    public move(payload: CanvasEventPayload[]) {
-        this.socketProvider.emit(SQUARE_MOVE, { payload });
+    public clearCanvas(){
+        this.socketProvider.emit(CLEAR_CANVAS_EVENT, {});
     }
 
-    public onNewEvent(callback: (event: CanvasEventEntity) => void) {
-        this.socketProvider.onEvent(NEW_VERSION, (event: CanvasEventEntity) => {
-            callback(event);
+    public replayEvent(id: string){
+        this.socketProvider.emit(GET_EVENT, id);
+    }
+
+    public findLastEvent(){
+        this.socketProvider.emit(GET_LAST_EVENT, {});
+    }
+
+    public onCanvasUpdate(callback: (payload: CanvasEventEntity) => void) {
+        this.socketProvider.onEvent(UPDATE_CANVAS_EVENT, (payload: ICanvasEventEntity) => {
+            callback(new CanvasEventEntity(payload, this));
         });
     }
 
-    public destroy() {
+    public onError(callback: (error: Error) => void) {
+        this.socketProvider.onEvent(EXCEPTION_EVENT, callback);
+    }
+
+    public socketDisconnect(){
         this.socketProvider.disconnect();
     }
 
-    public clear(){
-        return new Promise<CanvasEventEntity>(res => this.socketProvider.emit<CanvasEventEntity>(CANVAS_CLEAR, {}, (event) => res(event)));
-    }
+
 }

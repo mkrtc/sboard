@@ -1,4 +1,4 @@
-import { CanvasEventPayload } from "../entities/canvas-event.entity";
+import { CanvasEventPayload } from "../types";
 
 
 export class UpdatePayloadDto{

@@ -1,11 +1,11 @@
 import type { FC } from 'react';
 import styles from "../styles/canvas.module.css";
-import { CanvasEventEntity } from '@/entities';
+import { CanvasEventEntity, EventEntity } from '@/entities';
 
 interface HistoryListViewProps {
-    events: CanvasEventEntity[];
+    events: EventEntity[];
     selectedEventId: string;
-    onClickToEvent: (event: CanvasEventEntity) => void;
+    onClickToEvent: (event: EventEntity) => void;
 }
 export const HistoryListView: FC<HistoryListViewProps> = ({ events, selectedEventId, onClickToEvent }) => {
     return (

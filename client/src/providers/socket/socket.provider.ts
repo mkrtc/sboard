@@ -38,7 +38,7 @@ export class SocketProvider {
     }
 
     public emit<T>(event: string, arg?: any[] | any, cb?: (payload: T) => void): void{
-        this._socket.emit(event, arg, cb);
+        this._socket.emit(event, arg, (value: T) => cb?.(value));
     }
 
     public send<T>(event: string, arg?: any[] | any, cb?: (payload: T) => void): void {

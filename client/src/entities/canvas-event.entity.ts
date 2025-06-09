@@ -1,28 +1,20 @@
-export interface CanvasEventPayload {
-    id: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    color: string;
-}
+import { SocketProvider } from "@/providers";
+import { EventEntity, IEventEntity } from "./event.entity";
+import { FigureEntity, IFigureEntity } from "./figure.entity";
+import { CanvasEventRepository } from "@/repositories";
 
-export interface ICanvasEventEntity {
-    id: string;
-    type: string;
-    data: CanvasEventPayload[];
-    created: string;
-}
 
+export interface ICanvasEventEntity{
+    event: IEventEntity;
+    canvas: IFigureEntity[];
+}
 
 export class CanvasEventEntity {
-    public id: string;
-    public type: string;
-    public payload: CanvasEventPayload[];
-    public created: Date;
+    event: EventEntity;
+    canvas: FigureEntity[];
 
-    constructor(event: ICanvasEventEntity) {
-        const created = new Date(event.created);
-        Object.assign(this, { ...event, created });
+    constructor(event: ICanvasEventEntity, canvasEventRepository: CanvasEventRepository){
+        this.event = new EventEntity(event.event, canvasEventRepository);
+        this.canvas = event.canvas.map((figure) => new FigureEntity(figure, canvasEventRepository));
     }
 }

@@ -1,8 +1,10 @@
 import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway } from '@nestjs/websockets';
 import { CanvasEventService } from './canvas-event.service';
 import type { Socket } from 'socket.io';
-import { UpdatePayloadDto } from './dto/update-payload.dto';
-import { CANVAS_CLEAR, GET_VERSION, NEW_SQUARE, NEW_VERSION, SQUARE_MOVE } from './constants';
+import { CLEAR_CANVAS_EVENT, CREATE_FIGURE_EVENT, GET_EVENT, MOVE_FIGURE_EVENT, DELETE_FIGURE_EVENT, UPDATE_CANVAS_EVENT, GET_LAST_EVENT } from './constants';
+import { MoveFigureDto } from './dto/move-figure.dto';
+import { ParseUUIDPipe } from '@nestjs/common';
+import { CanvasEventEnum } from './types';
 
 @WebSocketGateway({
   path: '/ws/events',
@@ -16,28 +18,39 @@ export class CanvasEventGateway {
     private readonly eventService: CanvasEventService
   ) { }
 
-  @SubscribeMessage(NEW_SQUARE)
-  public async addSquare(@ConnectedSocket() client: Socket) {
-    const currentEvent = await this.eventService.getCurrentEvent();
-    const event = await this.eventService.addSquare(currentEvent?.payload || []);
-    client.emit(NEW_VERSION, event);
+  @SubscribeMessage(MOVE_FIGURE_EVENT)
+  public async moveFigure(@ConnectedSocket() client: Socket, @MessageBody() dto: MoveFigureDto){
+    const state = await this.eventService.createEvent(CanvasEventEnum.MOVE, dto);
+    client.emit(UPDATE_CANVAS_EVENT, state);
+  }
+  
+  @SubscribeMessage(CREATE_FIGURE_EVENT)
+  public async createFigure(@ConnectedSocket() client: Socket){
+    const state = await this.eventService.createEvent(CanvasEventEnum.CREATE);
+    client.emit(UPDATE_CANVAS_EVENT, state);
   }
 
-  @SubscribeMessage(SQUARE_MOVE)
-  public async updatePayload(@ConnectedSocket() client: Socket, @MessageBody() payload: [UpdatePayloadDto]) {
-    const event = await this.eventService.updatePayload(payload[0].payload);
-    client.emit(NEW_VERSION, event);
+  @SubscribeMessage(DELETE_FIGURE_EVENT)
+  public async removeFigure(@ConnectedSocket() client: Socket, @MessageBody(new ParseUUIDPipe({version: "4"})) id: string){
+    const state = await this.eventService.createEvent(CanvasEventEnum.DELETE, {id});
+    client.emit(UPDATE_CANVAS_EVENT, state);
   }
 
-  @SubscribeMessage(GET_VERSION)
-  public async getEvent(@MessageBody() payload: string) {
-    const event = await this.eventService.getEventById(payload);
-    return event;
+  @SubscribeMessage(CLEAR_CANVAS_EVENT)
+  public async clear(@ConnectedSocket() client: Socket){
+    const state = await this.eventService.createEvent(CanvasEventEnum.CLEAR);
+    client.emit(UPDATE_CANVAS_EVENT, state);
   }
 
-  @SubscribeMessage(CANVAS_CLEAR)
-  public async clear(@ConnectedSocket() client: Socket) {
-    const event = await this.eventService.genCleanEvent();
-    client.emit(NEW_VERSION, event);
+  @SubscribeMessage(GET_EVENT)
+  public async getEvent(@ConnectedSocket() client: Socket, @MessageBody(new ParseUUIDPipe({version: "4"})) id: string){
+    const state = await this.eventService.replayByEventId(id);
+    client.emit(UPDATE_CANVAS_EVENT, state);
+  }
+
+  @SubscribeMessage(GET_LAST_EVENT)
+  public async getLastEvent(@ConnectedSocket() client: Socket){
+    const state = await this.eventService.findLastEvent();
+    client.emit(UPDATE_CANVAS_EVENT, state);
   }
 }

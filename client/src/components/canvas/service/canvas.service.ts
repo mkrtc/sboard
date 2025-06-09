@@ -1,6 +1,6 @@
-import { CanvasEventEntity, CanvasEventPayload } from "@/entities";
+import { CanvasEventEntity, EventEntity, FigureEntity } from "@/entities";
 import { HttpProvider, SocketProvider } from "@/providers";
-import { CanvasEventRepository } from "@/repositories";
+import { CanvasEventRepository, GetEventsFilter } from "@/repositories";
 import { MouseEvent } from "react";
 
 
@@ -12,11 +12,12 @@ export class CanvasService {
     private _connected: boolean = false;
     private _canvas: HTMLCanvasElement | null = null;
 
-    private _squares: CanvasEventPayload[] = [];
-    public _selectedEvent: CanvasEventEntity | null = null;
-    private _selectedSquare: CanvasEventPayload | null = null;
+    private _figures: FigureEntity[] = [];
+    private _selectedEvent: EventEntity | null = null;
+    private _selectedFigure: FigureEntity | null = null;
     private _offsetX: number = 0;
     private _offsetY: number = 0;
+    private _replayed: boolean = false;
 
 
     constructor() {
@@ -31,14 +32,14 @@ export class CanvasService {
         return this._connected;
     }
 
-    public startup(event: CanvasEventEntity, onNewEvent: (event: CanvasEventEntity) => void) {
+    public startup(onNewEvent: (event: CanvasEventEntity) => void) {
         if (!this._canvas) throw new Error("Canvas is not set");
-        this._selectedEvent = event;
-        this._squares = this._selectedEvent?.payload || [];
+        this.canvasEventRepository.findLastEvent();
         
         this.paint();
         
-        this.canvasEventRepository.onNewEvent(event => {
+        this.canvasEventRepository.onCanvasUpdate(event => {
+            this._selectedFigure = null;
             this.setEvent(event);
             onNewEvent(event);
             this.draw();
@@ -46,54 +47,57 @@ export class CanvasService {
     }
     
     public destroy() {
-        this.canvasEventRepository.destroy();
+        this.canvasEventRepository.socketDisconnect();
     }
 
-    public getEvents(){
-        return this.canvasEventRepository.getAll();
+    public getEvents(filter?: GetEventsFilter){
+        return this.canvasEventRepository.getEvents(filter);
     }
 
-    public async getEventById(eventId: string){
-        const ev = await this.canvasEventRepository.getEventById(eventId);
-        this._selectedEvent = ev;
-        this._squares = ev.payload;
-        this.draw()
-        return ev;
+    public replyEvent(eventId: string){
+        this.canvasEventRepository.replayEvent(eventId);
+        this._replayed = true;
     }
 
     public addEvent(event: CanvasEventEntity) {
-        this._selectedEvent = event;
+        this._selectedEvent = event.event;
+        this._figures = event.canvas;
         this.draw();
     }
 
-    public addSquare() {
-        this.canvasEventRepository.addSquare();
+    public createFigure() {
+        this.canvasEventRepository.createFigure();
     }
 
     public onMouseDown(event: MouseEvent<HTMLCanvasElement>) {
         const element = this.getElement(event);
-        this._selectedSquare = element;
+        this._selectedFigure = element;
     }
 
     public onMouseUp(event: MouseEvent<HTMLCanvasElement>) {
-        this._selectedSquare = null;
-        this.canvasEventRepository.move(this._squares);
+        if(this._replayed){
+            this._selectedFigure?.move(this._selectedEvent?.id);
+        }else{
+            this._selectedFigure?.move();
+        }
+        this._replayed = false;
+        this._selectedFigure = null;
     }
 
     public onMouseMove(event: MouseEvent<HTMLCanvasElement>) {
-        if (!this._selectedEvent || !this._selectedSquare) return;
+        if (!this._selectedEvent || !this._selectedFigure) return;
         const [canvas] = this.getCanvasCtx();
         const rect = canvas.getBoundingClientRect();
         const x = (event.clientX - rect.left) * (canvas.width / canvas.clientWidth);
         const y = (event.clientY - rect.top) * (canvas.height / canvas.clientHeight);
-        this._selectedSquare.x = x - this._offsetX;
-        this._selectedSquare.y = y - this._offsetY;
+        this._selectedFigure.x = x - this._offsetX;
+        this._selectedFigure.y = y - this._offsetY;
         this.draw();
     }
 
     private setEvent(event: CanvasEventEntity) {
-        this._selectedEvent = event;
-        this._squares = event.payload;
+        this._selectedEvent = event.event;
+        this._figures = event.canvas;
         this.draw();
     }
 
@@ -101,9 +105,9 @@ export class CanvasService {
         if (!this._selectedEvent) return null;
         const [_, ctx] = this.getCanvasCtx();
 
-        for (const square of this._selectedEvent.payload || []) {
-            ctx.fillStyle = square.color;
-            ctx.fillRect(square.x, square.y, square.width, square.height);
+        for (const figure of this._figures || []) {
+            ctx.fillStyle = figure.color;
+            ctx.fillRect(figure.x, figure.y, figure.width, figure.height);
         }
     }
 
@@ -116,15 +120,15 @@ export class CanvasService {
         return [this._canvas, ctx];
     }
 
-    private getElement(event: MouseEvent<HTMLCanvasElement>): CanvasEventPayload | null {
+    private getElement(event: MouseEvent<HTMLCanvasElement>): FigureEntity | null {
         if (!this._selectedEvent) return null;
         const [canvas] = this.getCanvasCtx();
         const rect = canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
 
-        for (let i = 0; i < this._selectedEvent?.payload?.length || 0; i++) {
-            const element = this._selectedEvent.payload[i];
+        for (let i = this._figures.length - 1; i >= 0; i--) {
+            const element = this._figures[i];
             if (
                 x >= element.x &&
                 x <= element.x + element.width &&
@@ -133,8 +137,8 @@ export class CanvasService {
             ) {
                 this._offsetX = x - element.x;
                 this._offsetY = y - element.y;
-                this._squares.splice(i, 1);
-                this._squares.push(element);
+                this._figures.splice(i, 1);
+                this._figures.push(element);
                 this.draw();
                 return element;
             }
@@ -146,15 +150,15 @@ export class CanvasService {
     private draw() {
         const [canvas, ctx] = this.getCanvasCtx();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (!this._squares) return;
-        for (const element of this._squares) {
+        if (!this._figures) return;
+        for (const element of this._figures) {
             ctx.fillStyle = element.color;
             ctx.fillRect(element.x, element.y, element.width, element.height);
         }
     }
 
     public clear(){
-        this.canvasEventRepository.clear();
+        this.canvasEventRepository.clearCanvas();
     }
 
 

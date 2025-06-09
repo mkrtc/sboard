@@ -33,33 +33,14 @@ export class HttpProvider{
     }
 
 
-    private async request<T, C>(method: RequestMethod, path: string, options?: RequestOptions): Promise<ApiSuccess<T> | ApiException<C>>{
+    private async request<T>(method: RequestMethod, path: string, options?: RequestOptions): Promise<T>{
         const url = this.genPathParamsObj(path, options?.params);
-        const {data} = await this._instance.request<ApiSuccess<T>>({
+        const {data} = await this._instance.request<T>({
             method,
             url,
             params: options?.query,
             data: options?.body
-        }).catch((err: AxiosError<ApiException<C>>) => {
-            if (err.response?.data) {
-              return { data: err.response.data };
-            }
-          
-            return {
-              data: {
-                requestId: '',
-                timestamp: new Date().toISOString(),
-                data: null,
-                reasons: ['Network error or unknown'],
-                solutions: ['Check your connection'],
-                code: 'NETWORK_ERROR',
-                context: null as C,
-                message: 'Network error or unknown',
-                status: 'error',
-                statusCode: 400
-              } as ApiException<C>
-            };
-          });
+        })
 
         return data;
     }
@@ -75,24 +56,24 @@ export class HttpProvider{
         return path;
     }
 
-    public get<T, C = object>(path: string, options?: Omit<RequestOptions, "body">){
-        return this.request<T, C>("GET", path, options);
+    public get<T>(path: string, options?: Omit<RequestOptions, "body">){
+        return this.request<T>("GET", path, options);
     }
 
-    public post<T, C = object>(path: string, options?: RequestOptions){
-        return this.request<T, C>("POST", path, options);
+    public post<T>(path: string, options?: RequestOptions){
+        return this.request<T>("POST", path, options);
     }
 
-    public put<T, C = object>(path: string, options?: RequestOptions){
-        return this.request<T, C>("PUT", path, options);
+    public put<T>(path: string, options?: RequestOptions){
+        return this.request<T>("PUT", path, options);
     }
 
 
-    public patch<T, C = object>(path: string, options?: RequestOptions){
-        return this.request<T, C>("PATCH", path, options);
+    public patch<T>(path: string, options?: RequestOptions){
+        return this.request<T>("PATCH", path, options);
     }
 
-    public delete<T, C = object>(path: string, options?: RequestOptions){
-        return this.request<T, C>("DELETE", path, options);
+    public delete<T>(path: string, options?: RequestOptions){
+        return this.request<T>("DELETE", path, options);
     }
 }

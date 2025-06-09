@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const PORT = process.env.PORT ?? 5000;
@@ -13,7 +14,7 @@ async function bootstrap() {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
   })
-
+  app.useGlobalPipes(new ValidationPipe({ transform: true, validateCustomDecorators: true }));
   const document = new DocumentBuilder()
     .setTitle('Sboard API')
     .setDescription('Документация по API Sboard')
