@@ -1,7 +1,7 @@
 import { CanvasEventEntity, EventEntity, ICanvasEventEntity, IEventEntity } from "@/entities";
 import { HTTP_CONFIG, HttpProvider, SocketProvider } from "@/providers";
 import { CLEAR_CANVAS_EVENT, CREATE_FIGURE_EVENT, DELETE_FIGURE_EVENT, EXCEPTION_EVENT, GET_EVENT, GET_LAST_EVENT, MOVE_FIGURE_EVENT, UPDATE_CANVAS_EVENT } from "./constants";
-import { GetEventsFilter } from "./types";
+import { CanvasException, GetEventsFilter } from "./types";
 
 
 export class CanvasEventRepository {
@@ -14,8 +14,8 @@ export class CanvasEventRepository {
     }
 
     public async getEvents(filter?: GetEventsFilter){
-        const events = await this.httpProvider.get<IEventEntity[]>(HTTP_CONFIG.paths.canvasEvent.find, {query: filter});
-        return events.map((event) => new EventEntity(event, this));
+        const events = await this.httpProvider.get<IEventEntity[] | null>(HTTP_CONFIG.paths.canvasEvent.find, {query: filter});
+        return events?.map((event) => new EventEntity(event, this)) || [];
     }
 
     public createFigure() {
@@ -48,7 +48,7 @@ export class CanvasEventRepository {
         });
     }
 
-    public onError(callback: (error: Error) => void) {
+    public onError<T>(callback: (error: T) => void) {
         this.socketProvider.onEvent(EXCEPTION_EVENT, callback);
     }
 

@@ -43,7 +43,7 @@ export class CanvasSnapshotRepository {
     /**Получить последний снапшот с ивентами */
     public async findWithEvents(snapshotId?: string): Promise<[CanvasSnapshotEntity, CanvasEventEntity[]] | null> {
         const snapshot = await this.repository.findOne({ where: { id: snapshotId }, order: { created: "DESC" }, relations: {event: true} });
-        if (!snapshot) return null;
+        if (!snapshot || !snapshot.event) return null;
         const events = await this.canvasEventRepository.find({ createdFrom: new Date(snapshot.event.created).getTime(), asc: true, take: 100 });
 
         return [snapshot, events];

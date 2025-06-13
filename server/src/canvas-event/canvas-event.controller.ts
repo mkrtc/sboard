@@ -12,11 +12,6 @@ export class CanvasEventController{
         private readonly canvasEventService: CanvasEventService
     ){}
 
-    // @Get()
-    // public findAll(){
-    //     return this.canvasEventService.getAll();
-    // }
-
     @Get()
     public async findEvents(@Query() dto: FindCanvasEventDto){
         return this.canvasEventService.findEvents(dto);

@@ -26,5 +26,5 @@ export class CanvasSnapshotEntity{
 
     @OneToOne(() => CanvasEventEntity, (event) => event.id, {onDelete: "CASCADE"})
     @JoinColumn({name: "event_id"})
-    public event: CanvasEventEntity;
+    public event: CanvasEventEntity | null;
 }

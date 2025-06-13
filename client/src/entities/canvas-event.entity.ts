@@ -5,16 +5,16 @@ import { CanvasEventRepository } from "@/repositories";
 
 
 export interface ICanvasEventEntity{
-    event: IEventEntity;
+    event: IEventEntity | null;
     canvas: IFigureEntity[];
 }
 
 export class CanvasEventEntity {
-    event: EventEntity;
+    event: EventEntity | null;
     canvas: FigureEntity[];
 
     constructor(event: ICanvasEventEntity, canvasEventRepository: CanvasEventRepository){
-        this.event = new EventEntity(event.event, canvasEventRepository);
+        this.event = event.event ? new EventEntity(event.event, canvasEventRepository) : null;
         this.canvas = event.canvas.map((figure) => new FigureEntity(figure, canvasEventRepository));
     }
 }

@@ -1,3 +1,5 @@
+import { CanvasEventEntity } from "./entities/canvas-event.entity";
+import { Figure } from "./entities/canvas-snapshot.entity";
 
 export type CanvasEventType = 'create' | 'move' | 'clear' | 'remove';
 
@@ -42,3 +44,8 @@ export type CanvasEventPayload<T extends CanvasEventEnum | unknown = unknown> =
     T extends CanvasEventEnum.CLEAR ? null :
     EventPayload
 ;
+
+export interface CreateEventData{
+    event: CanvasEventEntity;
+    canvas: Figure[];
+}

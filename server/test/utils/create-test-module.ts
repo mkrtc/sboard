@@ -13,7 +13,7 @@ export async function createTestModule(metadata: ModuleMetadata) {
             ...(metadata.providers || []),
         ],
         imports: [
-            ConfigModule.forRoot({ envFilePath: ".env" }),
+            ConfigModule.forRoot({ envFilePath: "../.env" }),
             DatabaseModule.register([
                 CanvasEventEntity, CanvasSnapshotEntity
             ]),

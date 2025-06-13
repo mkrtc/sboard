@@ -20,3 +20,9 @@ export interface GetEventsFilter{
     createdTo?: number;
     type?: CanvasEventType;
 }
+
+export interface CanvasException<T extends object = object>{
+    status: "error";
+    message: string;
+    cause?: T;
+} 

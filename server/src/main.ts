@@ -14,13 +14,14 @@ async function bootstrap() {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
   })
-  app.useGlobalPipes(new ValidationPipe({ transform: true, validateCustomDecorators: true }));
   const document = new DocumentBuilder()
-    .setTitle('Sboard API')
-    .setDescription('Документация по API Sboard')
-    .setVersion('1.0.0')
-    .build();
-
+  .setTitle('Sboard API')
+  .setDescription('Документация по API Sboard')
+  .setVersion('1.0.0')
+  .build();
+  
+  app.useGlobalPipes(new ValidationPipe({ transform: true, validateCustomDecorators: true }));
+  
   const documentFactory = SwaggerModule.createDocument(app, document);
   SwaggerModule.setup('api', app, documentFactory);
 

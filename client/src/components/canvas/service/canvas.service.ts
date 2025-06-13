@@ -1,6 +1,7 @@
 import { CanvasEventEntity, EventEntity, FigureEntity } from "@/entities";
 import { HttpProvider, SocketProvider } from "@/providers";
 import { CanvasEventRepository, GetEventsFilter } from "@/repositories";
+import { CanvasException } from "@/repositories/canvas-event";
 import { MouseEvent } from "react";
 
 
@@ -44,6 +45,9 @@ export class CanvasService {
             onNewEvent(event);
             this.draw();
         });
+    }
+    public onError<T extends object>(cb: (error: T) => void){
+        this.canvasEventRepository.onError(cb);
     }
     
     public destroy() {

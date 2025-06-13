@@ -9,8 +9,9 @@ import { FindCanvasSnapshotDto } from './dto/find-canvas-snapshot.dto';
 import { FindCanvasEventDto } from './dto/find-canvas-event.dto';
 import { WsException } from '@nestjs/websockets';
 import { MoveFigureDto } from './dto/move-figure.dto';
-import { CanvasEventEnum, CanvasEventPayload, CreatePayload, EventPayload } from './types';
+import { CanvasEventEnum, CanvasEventPayload, CreateEventData, CreatePayload, EventPayload } from './types';
 import { CreateFigureDto } from './dto/create-figure.dto';
+
 
 @Injectable()
 export class CanvasEventService {
@@ -21,7 +22,79 @@ export class CanvasEventService {
         private readonly canvasSnapshotRepository: CanvasSnapshotRepository
     ) { }
 
-    public async createSnapshot(eventId: string, state: Figure[]): Promise<CanvasSnapshotEntity> {
+    public createEvent(type: CanvasEventEnum.CLEAR): Promise<CreateEventData>;
+    public createEvent(type: CanvasEventEnum.CREATE, payload?: CreateFigureDto): Promise<CreateEventData>;
+    public createEvent(type: CanvasEventEnum.MOVE, payload: MoveFigureDto): Promise<CreateEventData>;
+    public createEvent(type: CanvasEventEnum.DELETE, payload: EventPayload): Promise<CreateEventData>;
+    public async createEvent(type: CanvasEventEnum, payload?: CanvasEventPayload | CreateFigureDto): Promise<CreateEventData> {
+        let event: CanvasEventEntity;
+
+        switch (type) {
+            case CanvasEventEnum.CREATE: {
+                const payloadData = payload as CreateFigureDto;
+                const data: CreatePayload = {
+                    color: this.getRandomColor(),
+                    id: uuidV4(),
+                    target: "square"
+                }
+                if (payloadData?.fromEventId) {
+                    event = await this.createSnapshotFromEventId(payloadData.fromEventId, type, data); break;
+                }
+                event = await this.canvasEventRepository.create(type, data);
+                break;
+            }
+            case CanvasEventEnum.MOVE: {
+                const payloadData = payload as MoveFigureDto;
+                if (payloadData.fromEventId) {
+                    event = await this.createSnapshotFromEventId(payloadData.fromEventId, type, payloadData); break;
+                }
+
+                event = await this.canvasEventRepository.create(type, payloadData); break;
+
+            }
+            case CanvasEventEnum.CLEAR: {
+                event = await this.canvasEventRepository.create(type);
+                break;
+            }
+            case CanvasEventEnum.DELETE: {
+                event = await this.canvasEventRepository.create(type, payload as EventPayload);
+                break;
+            }
+        }
+        const lastSnapshot = await this.canvasSnapshotRepository.findLast();
+        const { canvas } = lastSnapshot ? await this.replaySnapshot(lastSnapshot.id) : { canvas: [] };
+        const snapshot = await this.createSnapshot(event.id, canvas);
+        return await this.replaySnapshot(snapshot.id);
+    }
+
+    public async replayByEventId(eventId: string): Promise<CreateEventData> {
+        const event = await this.canvasEventRepository.findById(eventId);
+        if (!event) throw new WsException("Event not found");
+        const [snapshot] = await this.canvasSnapshotRepository.find({ createdTo: event.created.getTime() + 50, take: 1 });
+        if (!snapshot) throw new WsException("Snapshot not found");
+        return this.replaySnapshot(snapshot.id, event.id);
+    }
+
+    public async findLastEvent(): Promise<CreateEventData | {event: null, canvas: []}> {
+        const event = await this.canvasEventRepository.findLast();
+        const snapshot = await this.canvasSnapshotRepository.findLast();
+        if (!snapshot) return { event, canvas: [] };
+        return await this.replaySnapshot(snapshot.id);
+    }
+
+    public findSnapshots(dto: FindCanvasSnapshotDto): Promise<CanvasSnapshotEntity[]> {
+        return this.canvasSnapshotRepository.find(dto);
+    }
+
+    public findSnapshotWithEvents(): Promise<[CanvasSnapshotEntity, CanvasEventEntity[]] | null> {
+        return this.canvasSnapshotRepository.findWithEvents();
+    }
+
+    public findEvents(dto: FindCanvasEventDto): Promise<CanvasEventEntity[]> {
+        return this.canvasEventRepository.find(dto);
+    }
+
+    private async createSnapshot(eventId: string, state: Figure[]): Promise<CanvasSnapshotEntity> {
         const data = await this.canvasSnapshotRepository.findWithEvents();
         if (!data) {
             return await this.canvasSnapshotRepository.create({ state, eventId });
@@ -30,11 +103,10 @@ export class CanvasEventService {
         if (events.length >= 10) {
             return await this.canvasSnapshotRepository.create({ state, eventId: events[9].id });
         }
-
         return snapshot;
     }
 
-    public async createSnapshotFromEventId(eventId: string, type: CanvasEventEnum, payload?: CanvasEventPayload) {
+    private async createSnapshotFromEventId(eventId: string, type: CanvasEventEnum, payload?: CanvasEventPayload): Promise<CanvasEventEntity> {
         const baseEvent = await this.canvasEventRepository.findById(eventId);
         if (!baseEvent) throw new WsException("Event not found");
         const [snapshot] = await this.canvasSnapshotRepository.find({
@@ -51,7 +123,7 @@ export class CanvasEventService {
         return event;
     }
 
-    public async replaySnapshot(snapshotId: string, toEventId?: string) {
+    private async replaySnapshot(snapshotId: string, toEventId?: string): Promise<CreateEventData> {
         const data = await this.canvasSnapshotRepository.findWithEvents(snapshotId);
         if (!data) throw new WsException("Snapshot not found");
         const [snapshot, events] = data;
@@ -63,6 +135,8 @@ export class CanvasEventService {
             switch (type) {
                 case CanvasEventEnum.CREATE: {
                     const { id, target, color } = payload as CanvasEventPayload<CanvasEventEnum.CREATE>;
+                    const candidateIndex = state.findIndex(f => f.id === id);
+                    if (candidateIndex !== -1) continue;
                     const figure = this.createFigure(id, target, color);
                     state.push(figure); break;
                 }
@@ -93,80 +167,6 @@ export class CanvasEventService {
         return { event: events[events.length - 1], canvas: state };
     }
 
-    public async replayByEventId(eventId: string) {
-        const event = await this.canvasEventRepository.findById(eventId);
-        if (!event) throw new WsException("Event not found");
-        const [snapshot] = await this.canvasSnapshotRepository.find({ createdTo: event.created.getTime(), take: 1 });
-        if (!snapshot) throw new WsException("Snapshot not found");
-        return this.replaySnapshot(snapshot.id, event.id);
-    }
-
-    public createEvent(type: CanvasEventEnum.CLEAR): Promise<{ event: CanvasEventEntity, canvas: Figure[] }>;
-    public createEvent(type: CanvasEventEnum.CREATE, payload?: CreateFigureDto): Promise<{ event: CanvasEventEntity, canvas: Figure[] }>;
-    public createEvent(type: CanvasEventEnum.MOVE, payload: MoveFigureDto): Promise<{ event: CanvasEventEntity, canvas: Figure[] }>;
-    public createEvent(type: CanvasEventEnum.DELETE, payload: EventPayload): Promise<{ event: CanvasEventEntity, canvas: Figure[] }>;
-    public async createEvent(type: CanvasEventEnum, payload?: CanvasEventPayload | CreateFigureDto): Promise<{ event: CanvasEventEntity, canvas: Figure[] }> {
-        let event: CanvasEventEntity;
-
-        switch (type) {
-            case CanvasEventEnum.CREATE: {
-                const payloadData = payload as CreateFigureDto;
-                const data: CreatePayload = {
-                    color: this.getRandomColor(),
-                    id: uuidV4(),
-                    target: "square"
-                }
-                if(payloadData?.fromEventId){
-                    event = await this.createSnapshotFromEventId(payloadData.fromEventId, type, data); break;
-                }
-                event = await this.canvasEventRepository.create(type, data);
-                break;
-            }
-            case CanvasEventEnum.MOVE: {
-                const payloadData = payload as MoveFigureDto;
-                if (payloadData.fromEventId) {
-                    event = await this.createSnapshotFromEventId(payloadData.fromEventId, type, payloadData); break;
-                }
-
-                event = await this.canvasEventRepository.create(type, payloadData); break;
-
-            }
-            case CanvasEventEnum.CLEAR: {
-                event = await this.canvasEventRepository.create(type);
-                break;
-            }
-            case CanvasEventEnum.DELETE: {
-                event = await this.canvasEventRepository.create(type, payload as EventPayload);
-                break;
-            }
-        }
-        const lastSnapshot = await this.canvasSnapshotRepository.findLast();
-        const lastState = lastSnapshot ? await this.replaySnapshot(lastSnapshot.id) : { canvas: [] };
-        const snapshot = await this.createSnapshot(event.id, lastState.canvas);
-
-        return await this.replaySnapshot(snapshot.id);
-    }
-
-    public async findLastEvent() {
-        const event = await this.canvasEventRepository.findLast();
-        const snapshot = await this.canvasSnapshotRepository.findLast();
-        if (!snapshot) return { event, canvas: [] };
-        return await this.replaySnapshot(snapshot.id);
-    }
-
-    public findSnapshots(dto: FindCanvasSnapshotDto) {
-        return this.canvasSnapshotRepository.find(dto);
-    }
-
-    public findSnapshotWithEvents() {
-        return this.canvasSnapshotRepository.findWithEvents();
-    }
-
-    public findEvents(dto: FindCanvasEventDto) {
-        return this.canvasEventRepository.find(dto);
-    }
-
-
     private createFigure(id: string, type: string, color?: string): Figure {
         switch (type) {
             case "square": return this.createSquare(id, color);
@@ -179,7 +179,7 @@ export class CanvasEventService {
         }
     }
 
-    private createSquare(id: string, color?: string) {
+    private createSquare(id: string, color?: string): Figure {
         return {
             id,
             x: 0,
@@ -190,7 +190,7 @@ export class CanvasEventService {
         }
     }
 
-    private getRandomColor() {
+    private getRandomColor(): string {
         return COLORS[Math.floor(Math.random() * COLORS.length)];
     }
 }

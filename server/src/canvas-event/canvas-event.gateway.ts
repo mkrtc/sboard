@@ -5,6 +5,7 @@ import { CLEAR_CANVAS_EVENT, CREATE_FIGURE_EVENT, GET_EVENT, MOVE_FIGURE_EVENT, 
 import { MoveFigureDto } from './dto/move-figure.dto';
 import { ParseUUIDPipe } from '@nestjs/common';
 import { CanvasEventEnum } from './types';
+import { validateDto } from 'src/common/utils/validate-dto';
 
 @WebSocketGateway({
   path: '/ws/events',
@@ -19,7 +20,8 @@ export class CanvasEventGateway {
   ) { }
 
   @SubscribeMessage(MOVE_FIGURE_EVENT)
-  public async moveFigure(@ConnectedSocket() client: Socket, @MessageBody() dto: MoveFigureDto){
+  public async moveFigure(@ConnectedSocket() client: Socket, @MessageBody() body: MoveFigureDto){
+    const dto = await validateDto(MoveFigureDto, body);
     const state = await this.eventService.createEvent(CanvasEventEnum.MOVE, dto);
     client.emit(UPDATE_CANVAS_EVENT, state);
   }

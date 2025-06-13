@@ -1,20 +1,36 @@
 import { Type } from "class-transformer";
 import { CanvasEventEnum } from "../types";
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString } from "class-validator";
 
-export class FindCanvasEventDto{
+export class FindCanvasEventDto {
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
     /**@default 10 */
-    @Type(() => Number) 
     readonly take?: number;
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
     /**@default 0 */
-    @Type(() => Number) 
     readonly skip?: number;
+    @IsOptional()
+    @Type(() => Boolean)
+    @IsBoolean()
     /**@default false */
     readonly asc?: boolean;
     /**@default "created" */
+    @IsOptional()
+    @IsString()
     readonly order?: string;
-    @Type(() => Number) 
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
     readonly createdFrom?: number;
-    @Type(() => Number) 
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
     readonly createdTo?: number;
+    @IsOptional()
+    @IsEnum(CanvasEventEnum)
     readonly type?: CanvasEventEnum;
 }
