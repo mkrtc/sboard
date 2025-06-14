@@ -6,7 +6,6 @@
 
 - Установить приложение
     ```bash
-    # ~2-4 мин
     git clone https://github.com/mkrtc/sboard.git
     ```
 - Перейти в папку с приложением
@@ -15,8 +14,8 @@
     ```
 - Собрать docker compose и запустить
   ```bash
-  sudo docker compose run --build
-  sudo docker compose up
+  # ~2-4 мин
+  sudo docker compose up --build
   ```
 - Открыть `localhost:3000`
 
