@@ -66,7 +66,7 @@ export class CanvasEventService {
     public async replayByEventId(eventId: string): Promise<CreateEventData> {
         const event = await this.canvasEventRepository.findById(eventId);
         if (!event) throw new WsException("Event not found");
-        const [snapshot] = await this.canvasSnapshotRepository.find({ createdTo: event.created.getTime() + 50, take: 1 });
+        const [snapshot] = await this.canvasSnapshotRepository.find({ createdTo: event.created.getTime() + 200, take: 1 });
         if (!snapshot) throw new WsException("Snapshot not found");
         return this.replaySnapshot(snapshot.id, event.id);
     }
@@ -105,11 +105,19 @@ export class CanvasEventService {
     private async createSnapshotFromEventId(eventId: string, type: CanvasEventEnum, payload?: CanvasEventPayload): Promise<CanvasEventEntity> {
         const baseEvent = await this.canvasEventRepository.findById(eventId);
         if (!baseEvent) throw new WsException("Event not found");
+
+        let sp: CanvasSnapshotEntity | null = null;
         const [snapshot] = await this.canvasSnapshotRepository.find({
-            createdTo: baseEvent.created.getTime(),
+            createdTo: baseEvent.created.getTime() + 200,
             take: 1
         });
-        const restored = await this.replaySnapshot(snapshot.id, eventId);
+        if (!snapshot) {
+            sp = await this.createSnapshot(baseEvent.id, []);
+        }else{
+            sp = snapshot;
+        }
+
+        const restored = await this.replaySnapshot(sp.id, eventId);
         const event = await this.canvasEventRepository.create(type, payload);
         await this.canvasSnapshotRepository.create({
             state: restored.canvas,

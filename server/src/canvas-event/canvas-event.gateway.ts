@@ -7,6 +7,7 @@ import { ParseUUIDPipe } from '@nestjs/common';
 import { CanvasEventEnum, CanvasEventPayload, CreateEventData } from './types';
 import { validateDto } from 'src/common/utils/validate-dto';
 import { DeleteFigureDto } from './dto/delete-figure.dto';
+import { CreateFigureDto } from './dto/create-figure.dto';
 
 @WebSocketGateway({
   path: '/ws/events',
@@ -32,8 +33,9 @@ export class CanvasEventGateway {
   }
 
   @SubscribeMessage(CREATE_FIGURE_EVENT)
-  public async createFigure() {
-    await this.handleCanvasEvent(CanvasEventEnum.CREATE);
+  public async createFigure(@MessageBody() body: any) {
+    const dto = await validateDto(CreateFigureDto, body);
+    await this.handleCanvasEvent(CanvasEventEnum.CREATE, dto);
   }
 
   @SubscribeMessage(DELETE_FIGURE_EVENT)
@@ -60,7 +62,7 @@ export class CanvasEventGateway {
     this.server.emit(UPDATE_CANVAS_EVENT, state);
   }
 
-  private async handleCanvasEvent<E extends CanvasEventEnum>(type: E, payload?: CanvasEventPayload<E>) {
+  private async handleCanvasEvent(type: CanvasEventEnum, payload?: CanvasEventPayload | CreateFigureDto | null) {
     const state: CreateEventData = await this.eventService.createEvent(type, payload);
     this.server.emit(UPDATE_CANVAS_EVENT, state);
   }
