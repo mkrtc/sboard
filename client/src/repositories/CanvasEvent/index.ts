@@ -1,2 +1,2 @@
 export * from "./canvasEvent.repository";
-export type { GetEventsFilter, CanvasException } from "./canvasEvvent.types";
+export type { GetEventsFilter, CanvasException } from "./canvasEvent.types";

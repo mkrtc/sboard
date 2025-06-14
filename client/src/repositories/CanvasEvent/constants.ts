@@ -10,5 +10,5 @@ export const CLEAR_CANVAS_EVENT = "ClearCanvas";
 
 export const UPDATE_CANVAS_EVENT = "UpdateCanvas";
 
-export const EXCEPTION_EVENT = "Exception";
+export const EXCEPTION_EVENT = "exception";
 // ---

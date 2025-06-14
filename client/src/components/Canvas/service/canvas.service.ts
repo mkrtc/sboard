@@ -90,6 +90,10 @@ export class CanvasService {
     }
 
     public createFigure() {
+        if(this._replayed && this._selectedEvent){
+            this.canvasEventRepository.createFigure(this._selectedEvent.id);
+            return;
+        }
         this.canvasEventRepository.createFigure();
     }
 

@@ -1,7 +1,7 @@
 import { CanvasEventEntity, EventEntity, ICanvasEventEntity, IEventEntity } from "@/entities";
 import { HTTP_CONFIG, HttpProvider, SocketProvider } from "@/providers";
 import { CLEAR_CANVAS_EVENT, CREATE_FIGURE_EVENT, DELETE_FIGURE_EVENT, EXCEPTION_EVENT, GET_EVENT, GET_LAST_EVENT, MOVE_FIGURE_EVENT, UPDATE_CANVAS_EVENT } from "./constants";
-import { CanvasException, GetEventsFilter } from "./canvasEvvent.types";
+import { CanvasException, GetEventsFilter } from "./canvasEvent.types";
 
 
 export class CanvasEventRepository {
@@ -18,8 +18,8 @@ export class CanvasEventRepository {
         return events?.map((event) => new EventEntity(event, this)) || [];
     }
 
-    public createFigure() {
-        this.socketProvider.emit(CREATE_FIGURE_EVENT, {});
+    public createFigure(fromEventId?: string) {
+        this.socketProvider.emit(CREATE_FIGURE_EVENT, {fromEventId});
     }
 
     public moveFigure(id: string, x: number, y: number, fromEventId?: string){
