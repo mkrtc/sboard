@@ -22,11 +22,7 @@ export class CanvasEventService {
         private readonly canvasSnapshotRepository: CanvasSnapshotRepository
     ) { }
 
-    public createEvent(type: CanvasEventEnum.CLEAR): Promise<CreateEventData>;
-    public createEvent(type: CanvasEventEnum.CREATE, payload?: CreateFigureDto): Promise<CreateEventData>;
-    public createEvent(type: CanvasEventEnum.MOVE, payload: MoveFigureDto): Promise<CreateEventData>;
-    public createEvent(type: CanvasEventEnum.DELETE, payload: EventPayload): Promise<CreateEventData>;
-    public async createEvent(type: CanvasEventEnum, payload?: CanvasEventPayload | CreateFigureDto): Promise<CreateEventData> {
+    public async createEvent(type: CanvasEventEnum, payload?: CanvasEventPayload | CreateFigureDto | null): Promise<CreateEventData> {
         let event: CanvasEventEntity;
 
         switch (type) {

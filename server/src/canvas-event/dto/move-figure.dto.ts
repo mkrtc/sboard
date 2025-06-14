@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsInt, IsNotEmpty, IsOptional, IsUUID } from "class-validator";
+import { IsNotEmpty, IsNumber, IsOptional, IsUUID } from "class-validator";
 
 
 export class MoveFigureDto{
@@ -7,12 +7,12 @@ export class MoveFigureDto{
     @IsNotEmpty()
     readonly id: string;
     @Type(() => Number)
-    @IsInt()
     @IsNotEmpty()
+    @IsNumber({allowNaN: false, allowInfinity: false})
     readonly x: number;
     @Type(() => Number)
-    @IsInt()
     @IsNotEmpty()
+    @IsNumber({allowNaN: false, allowInfinity: false})
     readonly y: number;
     @IsOptional()
     @IsUUID("4")

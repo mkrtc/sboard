@@ -24,6 +24,7 @@ export class DatabaseService {
             imports: [ConfigModule],
             inject: [ConfigService],
             useFactory: (configService: ConfigService) => {
+                console.log("HOOOOST", configService.getOrThrow<string>("PG_HOST"))
                 return {
                     type: "postgres",
                     host: options?.host ? configService.getOrThrow<string>(options.host) : configService.getOrThrow<string>("PG_HOST"),

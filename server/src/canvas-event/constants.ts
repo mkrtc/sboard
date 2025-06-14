@@ -1,15 +1,15 @@
 
 // ws event
-export const MOVE_FIGURE_EVENT = "move_figure";
-export const CREATE_FIGURE_EVENT = "create_figure";
-export const DELETE_FIGURE_EVENT = "delete_figure";
+export const MOVE_FIGURE_EVENT = "MoveFigure";
+export const CREATE_FIGURE_EVENT = "CreateFigure";
+export const DELETE_FIGURE_EVENT = "DeleteFigure";
 
-export const GET_EVENT = "get_event";
-export const GET_LAST_EVENT = "get_last_event";
+export const GET_EVENT = "GetEvent";
+export const GET_LAST_EVENT = "GetLastEvent";
 
-export const CLEAR_CANVAS_EVENT = "clear_canvas";
+export const CLEAR_CANVAS_EVENT = "ClearCanvas";
 
-export const UPDATE_CANVAS_EVENT = "update_canvas";
+export const UPDATE_CANVAS_EVENT = "UpdateCanvas";
 // ---
 
 
