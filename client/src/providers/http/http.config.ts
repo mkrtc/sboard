@@ -1,8 +1,8 @@
 
 
 export const HTTP_CONFIG = {
-    baseUrl: "http://localhost",
-    port: 5000,
+    baseUrl: process.env.RENDER_API || "http://localhost",
+    port: process.env.RENDER_PORT || 5000,
     paths: {
         canvasEvent: {
             find: "/canvas-event"
