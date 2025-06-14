@@ -1,6 +1,6 @@
 # Тестовое задание для разработчика: Full-stack приложение с Event Sourcing и историей версий для [Sboard](https://sboard.online/)
 
-**Демонстрацию работы можно посмотреть [здесь]([url](https://github.com/mkrtc/sboard/blob/master/demo.mov))**
+**Демонстрацию работы можно посмотреть [здесь](https://sboard-ivory.vercel.app)**
 
 ## Быстрый старт
 
