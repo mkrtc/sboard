@@ -1,11 +1,12 @@
 # Тестовое задание для разработчика: Full-stack приложение с Event Sourcing и историей версий для [Sboard](https://sboard.online/)
 
-**Демонстрацию работы можно посмотреть [здесь](url)**
+**Демонстрацию работы можно посмотреть [здесь]([url](https://github.com/mkrtc/sboard/blob/master/demo.mov))**
 
 ## Быстрый старт
 
 - Установить приложение
     ```bash
+    # ~2-4 мин
     git clone https://github.com/mkrtc/sboard.git
     ```
 - Перейти в папку с приложением
