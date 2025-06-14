@@ -1,1 +1,1 @@
-export * from "./canvas-event";
+export * from "./CanvasEvent";

@@ -1,23 +1,32 @@
-version: '3.8'
 services:
     client:
+        depends_on:
+            - server
         image: client
         container_name: sboard-client
+        build:
+            context: ./client
+            dockerfile: Dockerfile         
         networks:
             - main
         ports:
             - 3000:3000
-        command: [ "node", "./.next/standalone/server.js" ]
+        command: [ "node", "server.js" ]
     server:
+        depends_on:
+            - postgres
         image: server
         container_name: sboard-server
+        build:
+            context: ./server
+            dockerfile: Dockerfile
         networks:
             - main
         ports:
             - 5000:5000
         env_file:
             - .env
-        command: [ "node", "./dist/main.js" ]
+        command: [ "node", "./dist/src/main.js" ]
     postgres:
         image: postgres:17-alpine
         container_name: postgres

@@ -1,6 +1,6 @@
 import type { FC, UIEvent } from 'react';
 import styles from "../styles/canvas.module.css";
-import { HistoryListView } from './history-list.view';
+import { HistoryListView } from './HistoryListView';
 import { EventEntity } from '@/entities';
 
 interface HistoryViewProps {
@@ -12,7 +12,7 @@ interface HistoryViewProps {
 export const HistoryView: FC<HistoryViewProps> = ({ events, selectedEventId, onClickToEvent, onScroll }) => {
     return (
         <div className={styles.canvas_container__history} onScroll={onScroll}>
-            <span className={styles.canvas_container__title}>history</span>
+            <span className={styles.canvas_container__title}>history {events.length}</span>
             <div className={styles.canvas_container__items}>
                 <HistoryListView events={events} selectedEventId={selectedEventId} onClickToEvent={onClickToEvent} />
             </div>

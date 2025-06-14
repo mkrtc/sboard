@@ -1,8 +1,7 @@
 import { CanvasEventEntity, EventEntity, FigureEntity } from "@/entities";
 import { HttpProvider, SocketProvider } from "@/providers";
 import { CanvasEventRepository, GetEventsFilter } from "@/repositories";
-import { CanvasException } from "@/repositories/canvas-event";
-import { MouseEvent } from "react";
+import { MouseEvent, UIEvent } from "react";
 
 
 
@@ -19,6 +18,8 @@ export class CanvasService {
     private _offsetX: number = 0;
     private _offsetY: number = 0;
     private _replayed: boolean = false;
+    private _lastScrollTop: number;
+    private _isThereMoreEvents: boolean = true;
 
 
     constructor() {
@@ -33,12 +34,9 @@ export class CanvasService {
         return this._connected;
     }
 
-    public startup(onNewEvent: (event: CanvasEventEntity) => void) {
+    public async startup(onNewEvent: (event: CanvasEventEntity) => void) {
         if (!this._canvas) throw new Error("Canvas is not set");
         this.canvasEventRepository.findLastEvent();
-        
-        this.paint();
-        
         this.canvasEventRepository.onCanvasUpdate(event => {
             this._selectedFigure = null;
             this.setEvent(event);
@@ -46,8 +44,30 @@ export class CanvasService {
             this.draw();
         });
     }
+
     public onError<T extends object>(cb: (error: T) => void){
         this.canvasEventRepository.onError(cb);
+    }
+
+    public async onHistoryScroll(event: UIEvent<HTMLDivElement>, filter?: GetEventsFilter): Promise<EventEntity[]>{
+        const target = event.currentTarget;
+
+        const { scrollTop, clientHeight, scrollHeight } = target;
+        const isScrollingDown = scrollTop > this._lastScrollTop;
+
+        this._lastScrollTop = scrollTop;
+
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight;
+
+        if (isScrollingDown && isAtBottom && this._isThereMoreEvents) {
+            const events = await this.getEvents(filter);
+            if(!events.length){
+                this._isThereMoreEvents = false;
+            }
+
+            return events;
+        }
+        return [];
     }
     
     public destroy() {
@@ -73,30 +93,44 @@ export class CanvasService {
         this.canvasEventRepository.createFigure();
     }
 
-    public onMouseDown(event: MouseEvent<HTMLCanvasElement>) {
+    public selectFigure(event: MouseEvent<HTMLCanvasElement>) {
         const element = this.getElement(event);
         this._selectedFigure = element;
     }
 
-    public onMouseUp(event: MouseEvent<HTMLCanvasElement>) {
+    public saveFigurePosition() {
+        if(!this._selectedEvent || !this._selectedFigure) return;
+        if(!this._selectedFigure.moved) {
+            this._selectedFigure = null;
+            return;
+        }
+
         if(this._replayed){
-            this._selectedFigure?.move(this._selectedEvent?.id);
+            this._selectedFigure.move(this._selectedEvent?.id);
         }else{
-            this._selectedFigure?.move();
+            this._selectedFigure.move();
         }
         this._replayed = false;
         this._selectedFigure = null;
     }
 
-    public onMouseMove(event: MouseEvent<HTMLCanvasElement>) {
+    public moveFigure(event: MouseEvent<HTMLCanvasElement>) {
         if (!this._selectedEvent || !this._selectedFigure) return;
         const [canvas] = this.getCanvasCtx();
         const rect = canvas.getBoundingClientRect();
         const x = (event.clientX - rect.left) * (canvas.width / canvas.clientWidth);
         const y = (event.clientY - rect.top) * (canvas.height / canvas.clientHeight);
-        this._selectedFigure.x = x - this._offsetX;
-        this._selectedFigure.y = y - this._offsetY;
+        this._selectedFigure.setPosition(x - this._offsetX, y - this._offsetY);
         this.draw();
+    }
+
+    public deleteFigure(event: MouseEvent<HTMLCanvasElement>){
+        const figure = this.getElement(event);
+        figure?.delete();
+    }
+
+    public clearCanvas(){
+        this.canvasEventRepository.clearCanvas();
     }
 
     private setEvent(event: CanvasEventEntity) {
@@ -105,17 +139,7 @@ export class CanvasService {
         this.draw();
     }
 
-    private paint() {
-        if (!this._selectedEvent) return null;
-        const [_, ctx] = this.getCanvasCtx();
-
-        for (const figure of this._figures || []) {
-            ctx.fillStyle = figure.color;
-            ctx.fillRect(figure.x, figure.y, figure.width, figure.height);
-        }
-    }
-
-
+    // Данный метод не самый лучший в плане оптимизации. Каждый раз создать новый массив это дорого, но в данном случае терпимо из-за не высокой нагрузки
     private getCanvasCtx(): [HTMLCanvasElement, CanvasRenderingContext2D] {
         if (!this._canvas) throw new Error("Canvas is not set");
         const ctx = this._canvas.getContext("2d");
@@ -161,9 +185,7 @@ export class CanvasService {
         }
     }
 
-    public clear(){
-        this.canvasEventRepository.clearCanvas();
-    }
+    
 
 
 }

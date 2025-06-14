@@ -1,6 +1,6 @@
 import { SocketProvider } from "@/providers";
-import { EventEntity, IEventEntity } from "./event.entity";
-import { FigureEntity, IFigureEntity } from "./figure.entity";
+import { EventEntity, IEventEntity } from "../Event/event.entity";
+import { FigureEntity, IFigureEntity } from "../Figure/figure.entity";
 import { CanvasEventRepository } from "@/repositories";
 
 
