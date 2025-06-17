@@ -20,6 +20,7 @@ export class CanvasService {
     private _replayed: boolean = false;
     private _lastScrollTop: number;
     private _isThereMoreEvents: boolean = true;
+    private _isLoadingEvents = false;
 
 
     constructor() {
@@ -45,40 +46,52 @@ export class CanvasService {
         });
     }
 
-    public onError<T extends object>(cb: (error: T) => void){
+    public onError<T extends object>(cb: (error: T) => void) {
         this.canvasEventRepository.onError(cb);
     }
 
-    public async onHistoryScroll(event: UIEvent<HTMLDivElement>, filter?: GetEventsFilter): Promise<EventEntity[]>{
+    public async onHistoryScroll(event: UIEvent<HTMLDivElement>, filter?: GetEventsFilter): Promise<EventEntity[]> {
         const target = event.currentTarget;
 
         const { scrollTop, clientHeight, scrollHeight } = target;
         const isScrollingDown = scrollTop > this._lastScrollTop;
 
         this._lastScrollTop = scrollTop;
+        const isAtBottom = Math.abs(scrollTop + clientHeight - scrollHeight) <= 2;
 
-        const isAtBottom = scrollTop + clientHeight >= scrollHeight;
+        console.log(isScrollingDown, isAtBottom)
+        console.log("scrollTop: " + scrollTop)
+        console.log("clientHeight: " + clientHeight)
+        console.log("scrollTop + clientHeight: " + (scrollTop + clientHeight))
+        console.log("scrollHeight: " + scrollHeight)
+        console.log("-------------------------------")
 
-        if (isScrollingDown && isAtBottom && this._isThereMoreEvents) {
-            const events = await this.getEvents(filter);
-            if(!events.length){
-                this._isThereMoreEvents = false;
+
+        if (isScrollingDown && isAtBottom && this._isThereMoreEvents && !this._isLoadingEvents) {
+            this._isLoadingEvents = true;
+
+            try {
+                const events = await this.getEvents(filter);
+                if (!events.length) {
+                    this._isThereMoreEvents = false;
+                }
+                return events;
+            } finally {
+                this._isLoadingEvents = false;
             }
-
-            return events;
         }
         return [];
     }
-    
+
     public destroy() {
         this.canvasEventRepository.socketDisconnect();
     }
 
-    public getEvents(filter?: GetEventsFilter){
+    public getEvents(filter?: GetEventsFilter) {
         return this.canvasEventRepository.getEvents(filter);
     }
 
-    public replyEvent(eventId: string){
+    public replyEvent(eventId: string) {
         this.canvasEventRepository.replayEvent(eventId);
         this._replayed = true;
     }
@@ -90,7 +103,7 @@ export class CanvasService {
     }
 
     public createFigure() {
-        if(this._replayed && this._selectedEvent){
+        if (this._replayed && this._selectedEvent) {
             this.canvasEventRepository.createFigure(this._selectedEvent.id);
             return;
         }
@@ -103,15 +116,15 @@ export class CanvasService {
     }
 
     public saveFigurePosition() {
-        if(!this._selectedEvent || !this._selectedFigure) return;
-        if(!this._selectedFigure.moved) {
+        if (!this._selectedEvent || !this._selectedFigure) return;
+        if (!this._selectedFigure.moved) {
             this._selectedFigure = null;
             return;
         }
 
-        if(this._replayed){
+        if (this._replayed) {
             this._selectedFigure.move(this._selectedEvent?.id);
-        }else{
+        } else {
             this._selectedFigure.move();
         }
         this._replayed = false;
@@ -128,12 +141,12 @@ export class CanvasService {
         this.draw();
     }
 
-    public deleteFigure(event: MouseEvent<HTMLCanvasElement>){
+    public deleteFigure(event: MouseEvent<HTMLCanvasElement>) {
         const figure = this.getElement(event);
         figure?.delete();
     }
 
-    public clearCanvas(){
+    public clearCanvas() {
         this.canvasEventRepository.clearCanvas();
     }
 
@@ -189,7 +202,7 @@ export class CanvasService {
         }
     }
 
-    
+
 
 
 }
